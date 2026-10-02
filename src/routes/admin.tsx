@@ -215,6 +215,11 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [loading, setLoading]           = useState(true);
   const [fetchError, setFetchError]     = useState("");
 
+  // Show a clear warning if env vars are missing (baked in as empty string at build time)
+  const supabaseUrl = import.meta.env["VITE_SUPABASE_URL"] as string;
+  const supabaseKey = import.meta.env["VITE_SUPABASE_ANON_KEY"] as string;
+  const envMissing  = !supabaseUrl || supabaseUrl.includes("your-project") || !supabaseKey;
+
   // Delete state
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string; table: "professionals" | "clients" } | null>(null);
   const [deleting, setDeleting]         = useState(false);
@@ -230,7 +235,8 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
       supabase.from("clients").select("*").order("created_at", { ascending: false }),
     ]);
     if (proRes.error || cliRes.error) {
-      setFetchError("Failed to load data. Check your Supabase connection.");
+      const msg = proRes.error?.message ?? cliRes.error?.message ?? "Unknown error";
+      setFetchError(`Failed to load data: ${msg}`);
     } else {
       setProfessionals((proRes.data ?? []) as ProRow[]);
       setClients((cliRes.data ?? []) as CliRow[]);
@@ -349,6 +355,13 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
             <StatCard label="Client signups" value={clients.length} icon={Users} />
             <StatCard label="Total registrations" value={professionals.length + clients.length} icon={Users} />
           </div>
+
+          {/* ── Env warning ── */}
+          {envMissing && (
+            <div className="mt-6 border border-yellow-300 bg-yellow-50 px-6 py-4 text-sm text-yellow-800">
+              <strong>⚠ Supabase env vars not set.</strong> VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY must be added in Vercel → Settings → Environment Variables, then redeploy.
+            </div>
+          )}
 
           {/* ── Tab bar ── */}
           <div className="mt-10 flex items-center justify-between gap-4 border-b border-border">
