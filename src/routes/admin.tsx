@@ -7,10 +7,18 @@ import {
 } from "lucide-react";
 import { supabase, type Professional, type Client } from "../lib/supabase";
 
+// ---------------------------------------------------------------------------
+// ADMIN GATE
+// The admin dashboard is only available when VITE_INCLUDE_ADMIN=true.
+// When this env var is absent (public / shared-hosting build) the route
+// renders a plain 404 — no auth code, no Supabase calls, nothing exposed.
+// ---------------------------------------------------------------------------
+const ADMIN_ENABLED = import.meta.env["VITE_INCLUDE_ADMIN"] === "true";
+
 export const Route = createFileRoute("/admin")({
   head: () => ({
     meta: [
-      { title: "Admin Dashboard | Konjo" },
+      { title: ADMIN_ENABLED ? "Admin Dashboard | Konjo" : "404 | Konjo" },
       { name: "robots", content: "noindex, nofollow" },
     ],
   }),
@@ -596,6 +604,23 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
 // ── Root component ─────────────────────────────────────────────────────────────
 
 function AdminPage() {
+  // Public build — show a plain 404, no admin code exposed
+  if (!ADMIN_ENABLED) {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center bg-background px-5 text-center">
+        <p className="text-7xl font-bold text-foreground">404</p>
+        <h1 className="mt-4 text-xl font-semibold text-foreground">Page not found</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          The page you're looking for doesn't exist.
+        </p>
+        <Link to="/" className="mt-6 inline-flex items-center gap-2 bg-primary px-5 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+          <ArrowLeft size={14} /> Back to Konjo
+        </Link>
+      </main>
+    );
+  }
+
+  // Admin build — full authenticated dashboard
   const { authed, login, logout } = useAdminAuth();
   if (!authed) return <PasswordGate onLogin={login} />;
   return <Dashboard onLogout={logout} />;
